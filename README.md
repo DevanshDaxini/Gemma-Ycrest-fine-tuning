@@ -128,7 +128,7 @@ curl -X POST http://localhost:8765/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gemma-revenue-brief",
-    "messages": [{"role": "user", "content": "Client: Jane. Goal: fat loss. Sessions: 3x/week."}],
+    "messages": [{"role": "user", "content": "Workout Log — Jane — 2024-04-25\nDuration: 52 min\n\n• Squat: 10x50kg | 8x55kg | 6x57.5kg\n• Romanian Deadlift: 10x40kg | 8x42.5kg\n• Hip Thrust: 12x60kg | 10x62.5kg | 8x65kg\n\nNotes: energy good, fat loss focus"}],
     "temperature": 0,
     "max_tokens": 512
   }'
