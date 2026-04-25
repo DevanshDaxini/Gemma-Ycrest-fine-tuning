@@ -1,0 +1,52 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Model weights & adapters (too large for git — share via HuggingFace Hub or DVC)
+*.npz
+*.safetensors
+*.gguf
+*.bin
+*.pt
+*.ckpt
+# Uncomment below if you DO want to share adapters (they're usually small):
+# !adapters/adapters.npz
+# !adapters/adapter_config.json
+
+# Caches
+.ruff_cache/
+.pytest_cache/
+*.cache
+.DS_Store
+
+# Env / secrets
+.env
+*.env.local
+service/.env
+
+# Training logs / generated data (reproducible, so no need to commit)
+# Comment these out if you want to share pre-generated data:
+phase1_toy/data/
+phase2_ndjson/data/
+final_phase_ndjson/data/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Claude
+.claude/
+
+# Temporary test files created during debugging
+service/test_*.py
+service/dummy.py
+service/stderr.txt
+service/stdout.txt

@@ -1,0 +1,21 @@
+services:
+  gemma-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # Point at model weights mounted below. Use HuggingFace repo ID or absolute path.
+      MODEL_PATH: /models/base_model
+      ADAPTER_PATH: /models/adapters
+      API_KEYS: ${API_KEYS:-dev-key-12345}
+      HOST: 0.0.0.0
+      PORT: 8000
+      MAX_TOKENS: 1024
+    volumes:
+      # Mount your local model weights and adapters into the container.
+      # Change the left side (host path) to match your local layout.
+      - ./base_model:/models/base_model:ro
+      - ./adapters:/models/adapters:ro
+    restart: unless-stopped
+    # Metal GPU is unavailable inside Docker on macOS — inference uses CPU.
+    # Remove this service and run `uvicorn main:app` directly on macOS for GPU acceleration.
