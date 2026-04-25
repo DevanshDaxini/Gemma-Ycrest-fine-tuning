@@ -1,9 +1,7 @@
-# Gemma 3 1B LoRA Fine-tuning Practice (MLX)
+# Gemma 3 1B LoRA Fine-tuning — Phase 2: Workout Log → NDJSON (MLX)
 
-Two-phase fine-tuning project on Apple Silicon (M4, 16GB).  
-**Phase 1**: nonsense word mapping — pipeline validation.  
-**Phase 2**: workout log → NDJSON report — structured generation skill.  
-Phase 2 is a skill-transfer prototype; its schema is a placeholder for a downstream NDJSON revenue-brief project.
+Fine-tuning Gemma 3 1B on Apple Silicon (M4, 16GB) to generate structured NDJSON revenue briefs from workout log inputs.  
+Built with [`mlx-lm`](https://github.com/ml-explore/mlx-examples/tree/main/llms/mlx_lm) LoRA on the `mlx-community/gemma-3-1b-it-4bit` model.
 
 ---
 
@@ -20,46 +18,6 @@ huggingface-cli login
 ### Model notes
 Both `lora_config.yaml` files default to `mlx-community/gemma-3-1b-it-4bit`.  
 If that repo doesn't exist yet, change `model:` to `google/gemma-3-1b-it`; mlx_lm converts on first use.
-
----
-
-## Phase 1: Nonsense Word Mapping
-
-### Run order
-
-```bash
-cd phase1_toy
-
-# 1. Generate data
-python generate_data.py
-# → data/train.jsonl (~315 ex), data/valid.jsonl (~35 ex), data/test.jsonl (~105 ex)
-
-# 2. Train
-bash train.sh
-# → adapters/ saved every 100 steps
-
-# 3. Inference (single prompt)
-python infer.py --prompt "Map: <word>" --mode greedy
-python infer.py --prompt "Map: <word1> <word2>" --mode distribution --top-k 5
-
-# 4. Evaluate
-python eval.py
-```
-
-### Expected runtime (M4, 16GB)
-| Step | Time |
-|------|------|
-| generate_data.py | < 5 s |
-| train.sh (250 iters) | ~5–8 min |
-| eval.py (105 examples) | ~8–12 min |
-
-### Expected accuracy
-| Category | Expected range |
-|----------|----------------|
-| Singleton (memorisation) | 90–100% |
-| Seen composition | 80–95% |
-| **Held-out composition** | **60–85%** ← key metric |
-| Triple (stretch) | 40–70% |
 
 ---
 
@@ -188,26 +146,6 @@ curl -X POST http://localhost:8765/v1/validate \
 
 ---
 
-## How to Swap Adapters
-
-Each phase saves adapters to `./adapters/`. To use a specific checkpoint:
-
-```bash
-# Use a specific adapter step
-python infer.py --adapter ./adapters/  # uses latest
-
-# Compare base vs fine-tuned
-python infer.py --prompt "..." --no-adapter      # base model
-python infer.py --prompt "..." --adapter ./adapters/  # fine-tuned
-
-# Swap Phase 1 adapter into Phase 2 infer (for cross-phase experiments)
-python phase2_ndjson/infer.py --adapter ./phase1_toy/adapters/
-```
-
-The adapter directory must contain `adapter_config.json` + `adapters.npz`.
-
----
-
 ## Reading the Loss Curve
 
 Training logs look like:
@@ -221,7 +159,7 @@ Iter 50: Train loss 1.924 ...
 - **Train loss falling quickly**: model memorising training examples.
 - **Val loss tracking closely**: good generalisation, no overfitting.
 - **Val loss rising while train loss falls**: overfitting — reduce iters or lower LR.
-- Typical healthy loss at convergence: 0.3–0.8 for Phase 1, 0.8–1.5 for Phase 2.
+- Typical healthy loss at convergence: 0.8–1.5 for Phase 2.
 
 To plot the loss (save stdout to a file first):
 ```bash
@@ -239,8 +177,7 @@ grep "Train loss" train_log.txt | awk '{print NR, $5}' > loss.txt
 batch_size: 2
 
 # Option 2: reduce max_seq_length
-max_seq_length: 128   # Phase 1
-max_seq_length: 256   # Phase 2
+max_seq_length: 256
 
 # Option 3: use 4-bit base model (default) and verify
 model: "mlx-community/gemma-3-1b-it-4bit"
@@ -252,10 +189,6 @@ model: "mlx-community/gemma-3-1b-it-4bit"
 model: "google/gemma-3-1b-it"
 # mlx_lm auto-converts safetensors → mlx on first load (~1 min)
 ```
-
-### Very slow generation in infer.py (distribution mode)
-Distribution mode re-runs the full forward pass per token step (no KV cache).  
-Normal for 10 steps. Use `--n-tokens 5` to halve it.
 
 ### Adapter load error: "adapter_config.json not found"
 Run training first (`bash train.sh`) before running infer/eval.
@@ -274,13 +207,6 @@ huggingface-cli login --token hf_YOUR_TOKEN
 
 ```
 gemma-finetune-practice/
-├── phase1_toy/
-│   ├── generate_data.py   word-mapping dataset generator
-│   ├── train.sh           invokes mlx_lm.lora
-│   ├── infer.py           greedy + distribution inference
-│   ├── eval.py            4-category accuracy report
-│   ├── lora_config.yaml   training hyperparameters
-│   └── data/              train / valid / test JSONL
 ├── phase2_ndjson/
 │   ├── schema.py          Pydantic schemas + 18 action IDs
 │   ├── generate_data.py   synthetic workout log generator
@@ -308,3 +234,48 @@ gemma-finetune-practice/
 ├── requirements.txt
 └── README.md
 ```
+
+---
+
+<details>
+<summary>Phase 1: Nonsense Word Mapping (pipeline validation — archived)</summary>
+
+Phase 1 was a sanity-check experiment to validate the fine-tuning pipeline before tackling the harder Phase 2 structured generation task. It is not the focus of this project.
+
+### Run order
+
+```bash
+cd phase1_toy
+
+# 1. Generate data
+python generate_data.py
+# → data/train.jsonl (~315 ex), data/valid.jsonl (~35 ex), data/test.jsonl (~105 ex)
+
+# 2. Train
+bash train.sh
+# → adapters/ saved every 100 steps
+
+# 3. Inference (single prompt)
+python infer.py --prompt "Map: <word>" --mode greedy
+python infer.py --prompt "Map: <word1> <word2>" --mode distribution --top-k 5
+
+# 4. Evaluate
+python eval.py
+```
+
+### Expected runtime (M4, 16GB)
+| Step | Time |
+|------|------|
+| generate_data.py | < 5 s |
+| train.sh (250 iters) | ~5–8 min |
+| eval.py (105 examples) | ~8–12 min |
+
+### Expected accuracy
+| Category | Expected range |
+|----------|----------------|
+| Singleton (memorisation) | 90–100% |
+| Seen composition | 80–95% |
+| **Held-out composition** | **60–85%** ← key metric |
+| Triple (stretch) | 40–70% |
+
+</details>
