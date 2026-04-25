@@ -204,6 +204,20 @@ gemma-finetune-practice/
 │   ├── eval.py            tiered evaluation + confusion matrix
 │   ├── lora_config.yaml
 │   └── data/
+├── service/               FastAPI inference service (OpenAI-compatible API)
+│   ├── main.py            FastAPI app — /health, /v1/validate, /v1/chat/completions
+│   ├── model.py           MLX model load + streaming/non-streaming inference
+│   ├── ndjson_validator.py NDJSON schema validation logic
+│   ├── schemas.py         Pydantic request/response models
+│   ├── auth.py            API key middleware
+│   ├── config.py          Settings (model path, adapter path, port)
+│   ├── smoke_test.py      End-to-end smoke test (starts server, runs all endpoints)
+│   ├── Dockerfile         Container build for the service
+│   ├── docker-compose.yml Docker Compose config
+│   ├── requirements.txt   Service-specific dependencies
+│   ├── .env.example       Example environment variables
+│   ├── README.md          Service-specific docs
+│   └── tests/             Pytest unit tests for API + validator
 ├── shared/
 │   └── mlx_utils.py       Gemma template, load, greedy, distribution helpers
 ├── requirements.txt
