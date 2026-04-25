@@ -103,6 +103,91 @@ python eval.py
 
 ---
 
+## Service: FastAPI Inference API
+
+The `service/` folder wraps the fine-tuned model in an **OpenAI-compatible REST API** built with FastAPI and served via uvicorn. It exposes three endpoints:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Returns model + adapter load status. No auth required. |
+| `POST /v1/chat/completions` | Generates NDJSON output from a workout log prompt. Supports streaming (`stream: true`). |
+| `POST /v1/validate` | Validates a raw NDJSON string against the schema (record types, action IDs, required fields). |
+
+All write endpoints require a Bearer API key (`Authorization: Bearer <key>`).
+
+### Setup
+
+```bash
+cd service
+pip install -r requirements.txt
+cp .env.example .env   # edit if needed (defaults work for local dev)
+```
+
+### Run the server
+
+```bash
+cd service
+uvicorn main:app --host 0.0.0.0 --port 8765
+```
+
+The service auto-loads the model and adapter on startup. Check readiness:
+
+```bash
+curl http://localhost:8765/health
+# → {"status": "ok", "model_loaded": true, "adapter_loaded": true}
+```
+
+### Point at your trained adapter
+
+```bash
+export MODEL_PATH=mlx-community/gemma-3-1b-it-4bit
+export ADAPTER_PATH=../phase2_ndjson/adapters
+```
+
+Or set them in `service/.env`:
+
+```
+MODEL_PATH=mlx-community/gemma-3-1b-it-4bit
+ADAPTER_PATH=../phase2_ndjson/adapters
+API_KEYS=dev-key-12345
+```
+
+### Run the end-to-end smoke test
+
+Starts the server, waits for the model to load, runs all endpoints, then shuts down:
+
+```bash
+cd service && python smoke_test.py --timeout 300
+```
+
+Expected output: all checks pass in ~30s (model loads from cache).
+
+### Example: generate a brief
+
+```bash
+curl -X POST http://localhost:8765/v1/chat/completions \
+  -H "Authorization: Bearer dev-key-12345" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemma-revenue-brief",
+    "messages": [{"role": "user", "content": "Client: Jane. Goal: fat loss. Sessions: 3x/week."}],
+    "temperature": 0,
+    "max_tokens": 512
+  }'
+```
+
+### Example: validate NDJSON output
+
+```bash
+curl -X POST http://localhost:8765/v1/validate \
+  -H "Authorization: Bearer dev-key-12345" \
+  -H "Content-Type: application/json" \
+  -d '{"content": "{\"record_type\": \"session_summary\", \"date\": \"2024-02-20\"}"}'
+# → {"valid": true, "errors": [], "parsed": [...]}
+```
+
+---
+
 ## How to Swap Adapters
 
 Each phase saves adapters to `./adapters/`. To use a specific checkpoint:
