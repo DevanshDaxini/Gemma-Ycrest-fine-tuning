@@ -1,0 +1,16 @@
+You are a business intelligence assistant. Analyse the following weekly data and produce a structured NDJSON report.
+
+Output rules:
+- One JSON object per line (NDJSON format — no commas between lines, no surrounding array)
+- Every line must have a "record_type" field
+- Valid record types: session_summary, highlight, recommendation
+- highlight and recommendation records must include an "action_id" chosen from this exact list:
+  ADD_ACCESSORY_WORK, DECREASE_LOAD, DELOAD_SUGGESTED, FORM_CHECK_NEEDED,
+  INCREASE_LOAD, MAINTAIN_LOAD, MOBILITY_WORK, NUTRITION_CHECK,
+  PLATEAU_DETECTED, PROGRESS_NOTED, PR_ACHIEVED, REST_DAY_RECOMMENDED,
+  SUPERSET_SUGGESTED, TECHNIQUE_REVIEW, VOLUME_DECREASE, VOLUME_INCREASE
+- Do NOT invent action IDs outside this list
+- Output NDJSON only — no explanatory text before or after
+
+Weekly data:
+{input}

@@ -57,3 +57,40 @@ class ValidateResponse(BaseModel):
     valid: bool              # True only if zero errors found
     errors: List[str]        # one entry per error, includes line number
     parsed: List[Any]        # successfully parsed JSON objects from the input
+
+
+# ── Report generation ─────────────────────────────────────────────────────────
+
+class ReportRequest(BaseModel):
+    input: str                          # weekly business data (free text or structured)
+    template: str = "default"           # prompt template name (maps to prompt_templates/<name>.txt)
+    max_retries: int = 3                # retry attempts if output is invalid NDJSON
+    temperature: float = 0.0            # 0 = deterministic (recommended)
+    max_tokens: int = 1500              # reports are typically 800-1500 tokens
+
+
+class ReportUsage(BaseModel):
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+
+
+class ReportResponse(BaseModel):
+    id: str                             # "report-<uuid>"
+    created_at: int                     # Unix timestamp
+    template: str
+    valid: bool                         # True if output passed NDJSON validation
+    attempts: int                       # how many inference attempts were made
+    output: str                         # raw NDJSON string
+    errors: List[str]                   # validation errors (empty if valid=True)
+    usage: ReportUsage
+
+
+class ReportListItem(BaseModel):
+    id: str
+    created_at: int
+    template: str
+    valid: bool
+    attempts: int
+    prompt_tokens: int
+    completion_tokens: int

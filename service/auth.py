@@ -9,6 +9,16 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from config import settings
+from rate_limiter import RateLimiter
+
+_limiter: RateLimiter | None = None
+
+
+def _get_limiter() -> RateLimiter:
+    global _limiter
+    if _limiter is None:
+        _limiter = RateLimiter(settings.rate_limit_rpm)
+    return _limiter
 
 # Paths that skip authentication entirely. /health must be public so load
 # balancers and monitoring can check the service without needing a key.
@@ -33,5 +43,8 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         token = auth_header[len("Bearer "):]
         if token not in settings.api_key_set:
             return JSONResponse(status_code=401, content={"error": "unauthorized"})
+
+        if not _get_limiter().is_allowed(token):
+            return JSONResponse(status_code=429, content={"error": "rate limit exceeded"})
 
         return await call_next(request)

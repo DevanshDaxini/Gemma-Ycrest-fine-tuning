@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     # store, or logs. Requires spaCy + en_core_web_lg. See ANONYMIZATION.md.
     anonymize: bool = False
 
+    # Max requests per API key per 60-second window. 0 = unlimited.
+    rate_limit_rpm: int = 60
+
+    # Default max retry attempts for report generation when NDJSON output is invalid.
+    max_report_retries: int = 3
+
     @property
     def api_key_set(self) -> set:
         """Parse the comma-separated API_KEYS string into a set for O(1) lookup."""
