@@ -23,6 +23,7 @@ from schemas import (
     ValidateResponse,
 )
 from session_store import append_turn, clear_session, get_history, session_exists
+from anonymizer import anonymize as _anonymize
 
 logging.basicConfig(
     level=logging.INFO,
@@ -53,8 +54,11 @@ app.add_middleware(APIKeyMiddleware)
 app.add_middleware(LoggingMiddleware)
 
 
-def _build_prompt(body: ChatCompletionRequest) -> tuple[str, bool]:
+def _build_prompt(body: ChatCompletionRequest, user_content: str) -> tuple[str, bool]:
     """Build the prompt string and whether it is pre-formatted.
+
+    user_content is passed explicitly so the caller can supply the anonymized
+    version before this function prepends session history.
 
     If session_id is set and history exists, all prior turns are prepended using
     Gemma's multi-turn template and raw_prompt=True is returned so inference
@@ -62,17 +66,13 @@ def _build_prompt(body: ChatCompletionRequest) -> tuple[str, bool]:
 
     Returns (prompt_string, raw_prompt_flag).
     """
-    new_user_content = next(
-        (m.content for m in reversed(body.messages) if m.role == "user"), ""
-    )
-
     if body.session_id:
         history = get_history(body.session_id)
         if history:
-            all_messages = history + [{"role": "user", "content": new_user_content}]
+            all_messages = history + [{"role": "user", "content": user_content}]
             return format_messages(all_messages), True
 
-    return new_user_content, False
+    return user_content, False
 
 
 async def _sse_generator(
@@ -145,7 +145,15 @@ async def chat_completions(request: Request, body: ChatCompletionRequest):
         (m.content for m in reversed(body.messages) if m.role == "user"), ""
     )
 
-    prompt, raw_prompt = _build_prompt(body)
+    # Anonymize before the content reaches the model, session store, or logs.
+    # Controlled by ANONYMIZE=true in .env or environment. Off by default.
+    if settings.anonymize:
+        result = _anonymize(user_content)
+        user_content = result.anonymized
+        if result.mapping:
+            logger.info("Anonymized %d entities before inference", len(result.mapping))
+
+    prompt, raw_prompt = _build_prompt(body, user_content)
     completion_id = f"chatcmpl-{uuid.uuid4().hex}"
     created = int(time.time())
 

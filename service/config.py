@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     # Default maximum tokens to generate per request (can be overridden per-request).
     max_tokens: int = 1024
 
+    # When True, all user input is anonymized before reaching the model, session
+    # store, or logs. Requires spaCy + en_core_web_lg. See ANONYMIZATION.md.
+    anonymize: bool = False
+
     @property
     def api_key_set(self) -> set:
         """Parse the comma-separated API_KEYS string into a set for O(1) lookup."""
