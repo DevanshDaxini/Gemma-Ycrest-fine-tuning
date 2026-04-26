@@ -30,6 +30,30 @@ except ImportError:
 _STOP_TOKEN = "<end_of_turn>"
 
 
+def format_messages(messages: list) -> str:
+    """Format a list of {role, content} dicts into Gemma's multi-turn chat template.
+
+    Used when session history exists and multiple turns need to be sent together.
+    Single-turn requests still use _fmt_prompt directly (faster path).
+
+    Gemma multi-turn format:
+        <start_of_turn>user
+        message<end_of_turn>
+        <start_of_turn>model
+        response<end_of_turn>
+        <start_of_turn>user
+        next message<end_of_turn>
+        <start_of_turn>model
+    """
+    parts = []
+    for msg in messages:
+        role = "user" if msg["role"] == "user" else "model"
+        parts.append(f"<start_of_turn>{role}\n{msg['content']}<end_of_turn>")
+    # Trailing open model turn — model fills this in.
+    parts.append("<start_of_turn>model\n")
+    return "\n".join(parts)
+
+
 class ModelState:
     """Holds the loaded model, tokenizer, and status flags.
 
@@ -106,15 +130,19 @@ def run_inference(
     prompt: str,
     temperature: float = 0.0,
     max_tokens: int = 1024,
+    raw_prompt: bool = False,
 ) -> Tuple[str, int, int]:
     """Run a single blocking inference pass.
 
     Returns (output_text, prompt_token_count, completion_token_count).
     Called by the non-streaming path in /v1/chat/completions.
+
+    raw_prompt=True: prompt is already formatted (e.g. from format_messages for
+    multi-turn sessions). raw_prompt=False (default): wraps prompt with _fmt_prompt.
     """
     from mlx_lm import generate
 
-    formatted = _fmt_prompt(prompt)
+    formatted = prompt if raw_prompt else _fmt_prompt(prompt)
     prompt_tokens = _count_tokens(state.tokenizer, formatted)
 
     output: str = generate(
@@ -137,12 +165,15 @@ def run_inference_stream(
     prompt: str,
     temperature: float = 0.0,
     max_tokens: int = 1024,
+    raw_prompt: bool = False,
 ) -> Generator[str, None, None]:
     """Synchronous generator that yields text chunks as the model produces them.
 
     This is a blocking generator and must be run in a thread executor so the
     async event loop stays unblocked. See _sse_generator in main.py for how
     this is wired into the async SSE response.
+
+    raw_prompt=True: skip _fmt_prompt wrapping (used for multi-turn sessions).
 
     Stop-token boundary handling:
     stream_generate emits tokens in small variable-size chunks. The stop token
@@ -153,7 +184,7 @@ def run_inference_stream(
     """
     from mlx_lm import stream_generate
 
-    formatted = _fmt_prompt(prompt)
+    formatted = prompt if raw_prompt else _fmt_prompt(prompt)
     buffer = ""
 
     for response in stream_generate(

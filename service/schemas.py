@@ -4,7 +4,7 @@
 # Completions API so that any OpenAI-compatible client can talk to this service
 # without modification (just swap the base URL and API key).
 
-from typing import List, Any
+from typing import List, Any, Optional
 from pydantic import BaseModel
 
 
@@ -19,6 +19,7 @@ class ChatCompletionRequest(BaseModel):
     temperature: float = 0.0   # 0 = greedy/deterministic (recommended for structured output)
     max_tokens: int = 1024
     stream: bool = False        # set True to receive token-by-token SSE response
+    session_id: Optional[str] = None  # if set, prior turns are prepended from session store
 
 
 class MessageResponse(BaseModel):
