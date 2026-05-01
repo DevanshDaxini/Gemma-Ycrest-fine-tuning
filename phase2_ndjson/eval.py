@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 Phase 2 tiered evaluation.
-Tier 1 – NDJSON validity   : every output line parses as JSON
-Tier 2 – Action ID validity : all action_id fields in 18-item closed set
-Tier 3 – Schema adherence   : each record matches its record_type schema
-Tier 4 – Semantic accuracy  : spot-check on ≤10 examples vs deterministic rules
+Tier 1 - NDJSON validity   : every output line parses as JSON
+Tier 2 - Action ID validity : all action_id fields in 18-item closed set
+Tier 3 - Schema adherence   : each record matches its record_type schema
+Tier 4 - Semantic accuracy  : spot-check on ≤10 examples vs deterministic rules
 Also prints: confusion-matrix of predicted action_ids (invented vs valid).
 """
 import argparse
